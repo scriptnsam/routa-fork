@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  DRIVER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum VehicleType {
+  BIKE
+  CAR
+  VAN
+  TRUCK
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  phone         String    @unique
+  password      String
+  firstName     String
+  lastName      String
+  role          Role      @default(CUSTOMER)
+  avatar        String?
+  isVerified    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  orders        Order[]   @relation("CustomerOrders")
+  driverProfile Driver?
+  notifications Notification[]
+}
+
+model Driver {
+  id              String      @id @default(cuid())
+  userId          String      @unique
+  vehicleType     VehicleType
+  vehiclePlate    String
+  licenseNumber   String
+  isAvailable     Boolean     @default(true)
+  isApproved      Boolean     @default(false)
+  currentLat      Float?
+  currentLng      Float?
+  rating          Float       @default(0)
+  totalDeliveries Int         @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  user            User        @relation(fields: [userId], references: [id])
+  orders          Order[]     @relation("DriverOrders")
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  customerId      String
+  driverId        String?
+  
+  // Pickup details
+  pickupAddress   String
+  pickupLat       Float
+  pickupLng       Float
+  pickupContact   String
+  
+  // Dropoff details
+  dropoffAddress  String
+  dropoffLat      Float
+  dropoffLng      Float
+  dropoffContact  String
+  
+  // Package details
+  packageDesc     String
+  packageWeight   Float?
+  
+  // Pricing & Status
+  distance        Float
+  price           Float
+  status          OrderStatus @default(PENDING)
+  
+  // Timestamps
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  pickedUpAt      DateTime?
+  deliveredAt     DateTime?
+
+  // Relations
+  customer        User        @relation("CustomerOrders", fields: [customerId], references: [id])
+  driver          Driver?     @relation("DriverOrders", fields: [driverId], references: [id])
+  tracking        Tracking[]
+}
+
+model Tracking {
+  id          String   @id @default(cuid())
+  orderId     String
+  lat         Float
+  lng         Float
+  timestamp   DateTime @default(now())
+
+  // Relations
+  order       Order    @relation(fields: [orderId], references: [id])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  message     String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id])
+}
