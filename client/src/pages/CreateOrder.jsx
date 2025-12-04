@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
+import LocationPicker from '../components/Map/LocationPicker';
+import RouteMap from '../components/Map/RouteMap';
 
 const CreateOrder = () => {
   const { user, logout } = useAuth();
@@ -10,18 +13,11 @@ const CreateOrder = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
+  const [pickup, setPickup] = useState(null);
+  const [dropoff, setDropoff] = useState(null);
   const [formData, setFormData] = useState({
-    // Pickup
-    pickupAddress: '',
-    pickupLat: 6.5244,
-    pickupLng: 3.3792,
     pickupContact: '',
-    // Dropoff
-    dropoffAddress: '',
-    dropoffLat: 6.4541,
-    dropoffLng: 3.3947,
     dropoffContact: '',
-    // Package
     packageDesc: '',
     packageWeight: '',
   });
@@ -37,14 +33,15 @@ const CreateOrder = () => {
   };
 
   const calculatePrice = () => {
-    // Simple distance calculation
+    if (!pickup || !dropoff) return;
+
     const R = 6371;
-    const dLat = (formData.dropoffLat - formData.pickupLat) * (Math.PI / 180);
-    const dLng = (formData.dropoffLng - formData.pickupLng) * (Math.PI / 180);
+    const dLat = (dropoff.lat - pickup.lat) * (Math.PI / 180);
+    const dLng = (dropoff.lng - pickup.lng) * (Math.PI / 180);
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(formData.pickupLat * (Math.PI / 180)) *
-      Math.cos(formData.dropoffLat * (Math.PI / 180)) *
+      Math.cos(pickup.lat * (Math.PI / 180)) *
+      Math.cos(dropoff.lat * (Math.PI / 180)) *
       Math.sin(dLng / 2) * Math.sin(dLng / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = Math.round(R * c * 10) / 10;
@@ -58,13 +55,13 @@ const CreateOrder = () => {
 
   const nextStep = () => {
     if (step === 1) {
-      if (!formData.pickupAddress || !formData.pickupContact) {
-        setError('Please fill in all pickup details');
+      if (!pickup || !formData.pickupContact) {
+        setError('Please select pickup location and enter contact');
         return;
       }
     } else if (step === 2) {
-      if (!formData.dropoffAddress || !formData.dropoffContact) {
-        setError('Please fill in all dropoff details');
+      if (!dropoff || !formData.dropoffContact) {
+        setError('Please select dropoff location and enter contact');
         return;
       }
       calculatePrice();
@@ -89,12 +86,27 @@ const CreateOrder = () => {
     setLoading(true);
     setError('');
 
-    // For now, just show success (we'll connect to backend later)
-    setTimeout(() => {
+    try {
+      const orderData = {
+        pickupAddress: pickup.address,
+        pickupLat: pickup.lat,
+        pickupLng: pickup.lng,
+        pickupContact: formData.pickupContact,
+        dropoffAddress: dropoff.address,
+        dropoffLat: dropoff.lat,
+        dropoffLng: dropoff.lng,
+        dropoffContact: formData.dropoffContact,
+        packageDesc: formData.packageDesc,
+        packageWeight: formData.packageWeight ? parseFloat(formData.packageWeight) : null,
+      };
+
+      const response = await api.post('/orders', orderData);
+      navigate(`/orders/${response.data.order.id}`);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create order');
+    } finally {
       setLoading(false);
-      alert('Order created successfully! (Demo)');
-      navigate('/orders/my-orders');
-    }, 1500);
+    }
   };
 
   const handleLogout = () => {
@@ -123,7 +135,7 @@ const CreateOrder = () => {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-2xl mx-auto px-4 py-8">
+      <main className="max-w-3xl mx-auto px-4 py-8">
         <div className="bg-white rounded-xl shadow-md p-6">
           <h1 className="text-2xl font-bold text-gray-800 mb-6">Create Delivery Order</h1>
 
@@ -142,7 +154,7 @@ const CreateOrder = () => {
                 </div>
                 {s < 3 && (
                   <div
-                    className={`w-20 md:w-32 h-1 mx-2 ${
+                    className={`w-16 md:w-24 h-1 mx-2 ${
                       step > s ? 'bg-blue-600' : 'bg-gray-200'
                     }`}
                   />
@@ -153,8 +165,8 @@ const CreateOrder = () => {
 
           <div className="text-center mb-6">
             <p className="text-lg font-medium text-gray-700">
-              {step === 1 && '📍 Pickup Details'}
-              {step === 2 && '📦 Dropoff Details'}
+              {step === 1 && '📍 Select Pickup Location'}
+              {step === 2 && '📦 Select Dropoff Location'}
               {step === 3 && '✅ Confirm Order'}
             </p>
           </div>
@@ -169,19 +181,13 @@ const CreateOrder = () => {
             {/* Step 1: Pickup */}
             {step === 1 && (
               <div className="space-y-4">
-                <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2">
-                    Pickup Address
-                  </label>
-                  <input
-                    type="text"
-                    name="pickupAddress"
-                    value={formData.pickupAddress}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                    placeholder="Enter pickup address"
-                  />
-                </div>
+                <LocationPicker
+                  label="📍 Pickup Location"
+                  value={pickup}
+                  onChange={setPickup}
+                  placeholder="Search pickup address..."
+                  markerColor="#22C55E"
+                />
 
                 <div>
                   <label className="block text-gray-700 text-sm font-bold mb-2">
@@ -202,7 +208,7 @@ const CreateOrder = () => {
                   onClick={nextStep}
                   className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-semibold"
                 >
-                  Next: Dropoff Details →
+                  Next: Dropoff Location →
                 </button>
               </div>
             )}
@@ -210,19 +216,13 @@ const CreateOrder = () => {
             {/* Step 2: Dropoff */}
             {step === 2 && (
               <div className="space-y-4">
-                <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2">
-                    Dropoff Address
-                  </label>
-                  <input
-                    type="text"
-                    name="dropoffAddress"
-                    value={formData.dropoffAddress}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                    placeholder="Enter dropoff address"
-                  />
-                </div>
+                <LocationPicker
+                  label="📦 Dropoff Location"
+                  value={dropoff}
+                  onChange={setDropoff}
+                  placeholder="Search dropoff address..."
+                  markerColor="#EF4444"
+                />
 
                 <div>
                   <label className="block text-gray-700 text-sm font-bold mb-2">
@@ -260,6 +260,14 @@ const CreateOrder = () => {
             {/* Step 3: Confirm */}
             {step === 3 && (
               <div className="space-y-6">
+                {/* Route Map */}
+                {pickup && dropoff && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Route Preview</h3>
+                    <RouteMap pickup={pickup} dropoff={dropoff} />
+                  </div>
+                )}
+
                 {/* Price Estimate */}
                 {priceEstimate && (
                   <div className="bg-blue-50 p-4 rounded-lg">
@@ -281,17 +289,17 @@ const CreateOrder = () => {
                 )}
 
                 {/* Order Summary */}
-                <div className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
                   <div className="bg-green-50 p-4 rounded-lg">
                     <p className="text-sm text-gray-600 mb-1">📍 Pickup</p>
-                    <p className="font-medium text-gray-800">{formData.pickupAddress}</p>
-                    <p className="text-sm text-blue-600">{formData.pickupContact}</p>
+                    <p className="font-medium text-gray-800 text-sm">{pickup?.address}</p>
+                    <p className="text-sm text-blue-600 mt-1">{formData.pickupContact}</p>
                   </div>
 
                   <div className="bg-red-50 p-4 rounded-lg">
                     <p className="text-sm text-gray-600 mb-1">📦 Dropoff</p>
-                    <p className="font-medium text-gray-800">{formData.dropoffAddress}</p>
-                    <p className="text-sm text-blue-600">{formData.dropoffContact}</p>
+                    <p className="font-medium text-gray-800 text-sm">{dropoff?.address}</p>
+                    <p className="text-sm text-blue-600 mt-1">{formData.dropoffContact}</p>
                   </div>
                 </div>
 

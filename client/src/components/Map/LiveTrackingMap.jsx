@@ -1,134 +1,214 @@
-import { useState, useEffect, useCallback } from 'react';
-import {
-  GoogleMap,
-  useJsApiLoader,
-  Marker,
-  Polyline,
-} from '@react-google-maps/api';
+import { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
 
-const containerStyle = {
-  width: '100%',
-  height: '400px',
+// Fix for default marker icon
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+// Custom marker icons
+const pickupIcon = L.divIcon({
+  className: 'custom-marker',
+  html: `<div style="background-color: #22C55E; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 12px;">📍</div>`,
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+});
+
+const dropoffIcon = L.divIcon({
+  className: 'custom-marker',
+  html: `<div style="background-color: #EF4444; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 12px;">📦</div>`,
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+});
+
+const driverIcon = L.divIcon({
+  className: 'custom-marker',
+  html: `<div style="background-color: #3B82F6; width: 40px; height: 40px; border-radius: 50%; border: 4px solid white; box-shadow: 0 3px 8px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 20px; animation: pulse 2s infinite;">🚗</div>`,
+  iconSize: [40, 40],
+  iconAnchor: [20, 20],
+});
+
+// Component to follow driver
+const FollowDriver = ({ driverLocation }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (driverLocation) {
+      map.panTo([driverLocation.lat, driverLocation.lng]);
+    }
+  }, [driverLocation, map]);
+
+  return null;
 };
 
-const libraries = ['places'];
+// Component to fit all markers
+const FitAllMarkers = ({ pickup, dropoff, driverLocation }) => {
+  const map = useMap();
 
-const LiveTrackingMap = ({ pickup, dropoff, driverLocation, status }) => {
-  const [map, setMap] = useState(null);
+  useEffect(() => {
+    const points = [];
+    if (pickup) points.push([pickup.lat, pickup.lng]);
+    if (dropoff) points.push([dropoff.lat, dropoff.lng]);
+    if (driverLocation) points.push([driverLocation.lat, driverLocation.lng]);
 
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries,
-  });
-
-  const onLoad = useCallback((map) => {
-    setMap(map);
+    if (points.length >= 2) {
+      const bounds = L.latLngBounds(points);
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
   }, []);
 
-  // Center map on driver when location updates
+  return null;
+};
+
+const LiveTrackingMap = ({ pickup, dropoff, driverLocation, status }) => {
+  const [route, setRoute] = useState(null);
+  const [routeToDestination, setRouteToDestination] = useState(null);
+
+  const defaultCenter = [6.5244, 3.3792];
+
+  // Fetch main route (pickup to dropoff)
   useEffect(() => {
-    if (map && driverLocation) {
-      map.panTo({ lat: driverLocation.lat, lng: driverLocation.lng });
-    }
-  }, [map, driverLocation]);
+    const fetchRoute = async () => {
+      if (!pickup || !dropoff) return;
 
-  if (loadError) {
-    return (
-      <div className="flex items-center justify-center h-[400px] bg-gray-100">
-        <p className="text-red-500">Error loading maps</p>
-      </div>
-    );
-  }
+      try {
+        const response = await fetch(
+          `https://router.project-osrm.org/route/v1/driving/${pickup.lng},${pickup.lat};${dropoff.lng},${dropoff.lat}?overview=full&geometries=geojson`
+        );
+        const data = await response.json();
 
-  if (!isLoaded) {
-    return (
-      <div className="flex items-center justify-center h-[400px] bg-gray-100">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+        if (data.routes && data.routes.length > 0) {
+          const coordinates = data.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+          setRoute(coordinates);
+        }
+      } catch (error) {
+        console.error('Error fetching route:', error);
+      }
+    };
 
-  const center = driverLocation || pickup || { lat: 6.5244, lng: 3.3792 };
+    fetchRoute();
+  }, [pickup, dropoff]);
 
-  // Create path for polyline
-  const getPath = () => {
-    const path = [];
-    if (driverLocation) path.push(driverLocation);
-    if (status === 'ACCEPTED' || status === 'PICKED_UP') {
-      if (pickup) path.push(pickup);
-    }
-    if (status === 'IN_TRANSIT' || status === 'PICKED_UP') {
-      if (dropoff) path.push(dropoff);
-    }
-    return path;
+  // Fetch driver route to current destination
+  useEffect(() => {
+    const fetchDriverRoute = async () => {
+      if (!driverLocation) return;
+
+      // Determine destination based on status
+      let destination;
+      if (status === 'ACCEPTED') {
+        destination = pickup;
+      } else if (['PICKED_UP', 'IN_TRANSIT'].includes(status)) {
+        destination = dropoff;
+      }
+
+      if (!destination) return;
+
+      try {
+        const response = await fetch(
+          `https://router.project-osrm.org/route/v1/driving/${driverLocation.lng},${driverLocation.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`
+        );
+        const data = await response.json();
+
+        if (data.routes && data.routes.length > 0) {
+          const coordinates = data.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+          setRouteToDestination(coordinates);
+        }
+      } catch (error) {
+        console.error('Error fetching driver route:', error);
+      }
+    };
+
+    fetchDriverRoute();
+  }, [driverLocation, status, pickup, dropoff]);
+
+  const getCenter = () => {
+    if (driverLocation) return [driverLocation.lat, driverLocation.lng];
+    if (pickup) return [pickup.lat, pickup.lng];
+    return defaultCenter;
   };
 
   return (
     <div className="rounded-lg overflow-hidden border border-gray-300">
-      <GoogleMap
-        mapContainerStyle={containerStyle}
-        center={center}
-        zoom={14}
-        onLoad={onLoad}
-        options={{
-          zoomControl: true,
-          streetViewControl: false,
-          mapTypeControl: false,
-          fullscreenControl: false,
-        }}
-      >
-        {/* Pickup Marker */}
-        {pickup && (
-          <Marker
-            position={{ lat: pickup.lat, lng: pickup.lng }}
-            icon={{
-              url: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png',
-            }}
-            title="Pickup Location"
-          />
-        )}
+      {/* Add CSS animation for pulse effect */}
+      <style>{`
+        @keyframes pulse {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+          100% { transform: scale(1); }
+        }
+      `}</style>
 
-        {/* Dropoff Marker */}
-        {dropoff && (
-          <Marker
-            position={{ lat: dropoff.lat, lng: dropoff.lng }}
-            icon={{
-              url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png',
-            }}
-            title="Dropoff Location"
+      <div className="h-[400px]">
+        <MapContainer
+          center={getCenter()}
+          zoom={14}
+          style={{ height: '100%', width: '100%' }}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-        )}
 
-        {/* Driver Marker - Animated */}
-        {driverLocation && (
-          <Marker
-            position={{ lat: driverLocation.lat, lng: driverLocation.lng }}
-            icon={{
-              path: window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-              scale: 6,
-              fillColor: '#3B82F6',
-              fillOpacity: 1,
-              strokeColor: '#1E40AF',
-              strokeWeight: 2,
-              rotation: 0,
-            }}
-            title="Driver Location"
-          />
-        )}
+          <FitAllMarkers pickup={pickup} dropoff={dropoff} driverLocation={driverLocation} />
+          
+          {driverLocation && <FollowDriver driverLocation={driverLocation} />}
 
-        {/* Path line */}
-        {getPath().length > 1 && (
-          <Polyline
-            path={getPath()}
-            options={{
-              strokeColor: '#3B82F6',
-              strokeOpacity: 0.8,
-              strokeWeight: 3,
-              strokeDasharray: [10, 5],
-            }}
-          />
-        )}
-      </GoogleMap>
+          {/* Main Route (gray/dashed) */}
+          {route && (
+            <Polyline
+              positions={route}
+              color="#94A3B8"
+              weight={4}
+              opacity={0.6}
+              dashArray="10, 10"
+            />
+          )}
+
+          {/* Driver Route (blue/solid) */}
+          {routeToDestination && (
+            <Polyline
+              positions={routeToDestination}
+              color="#3B82F6"
+              weight={5}
+              opacity={0.9}
+            />
+          )}
+
+          {/* Pickup Marker */}
+          {pickup && (
+            <Marker position={[pickup.lat, pickup.lng]} icon={pickupIcon}>
+              <Popup>
+                <strong>📍 Pickup</strong>
+              </Popup>
+            </Marker>
+          )}
+
+          {/* Dropoff Marker */}
+          {dropoff && (
+            <Marker position={[dropoff.lat, dropoff.lng]} icon={dropoffIcon}>
+              <Popup>
+                <strong>📦 Dropoff</strong>
+              </Popup>
+            </Marker>
+          )}
+
+          {/* Driver Marker */}
+          {driverLocation && (
+            <Marker position={[driverLocation.lat, driverLocation.lng]} icon={driverIcon}>
+              <Popup>
+                <strong>🚗 Driver</strong>
+                <br />
+                Live Location
+              </Popup>
+            </Marker>
+          )}
+        </MapContainer>
+      </div>
 
       {/* Status Bar */}
       <div className="p-3 bg-white border-t">
@@ -150,7 +230,7 @@ const LiveTrackingMap = ({ pickup, dropoff, driverLocation, status }) => {
           {driverLocation && (
             <div className="flex items-center gap-1 text-green-600">
               <span className="animate-pulse w-2 h-2 bg-green-500 rounded-full"></span>
-              <span className="text-sm">Live</span>
+              <span className="text-sm font-medium">Live</span>
             </div>
           )}
         </div>
