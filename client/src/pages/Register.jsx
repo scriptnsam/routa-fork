@@ -135,6 +135,16 @@ const Register = () => {
 
   const isDriver = formData.role === 'DRIVER';
 
+  // Feature component defined inside
+  const Feature = ({ icon: Icon, text }) => (
+    <div className="flex items-center gap-3">
+      <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+        <Icon className="w-4 h-4" />
+      </div>
+      <span className="text-white/90">{text}</span>
+    </div>
+  );
+
   return (
     <div className={`min-h-screen flex ${
       isDriver 
@@ -440,7 +450,7 @@ const Register = () => {
             </div>
           </div>
 
-          {/* Social Login (placeholder) */}
+          {/* Social Login */}
           <div className="grid grid-cols-2 gap-4">
             <button
               type="button"
@@ -551,18 +561,5 @@ const Register = () => {
     </div>
   );
 };
-
-// Feature component
-const Feature = ({ icon: Icon, text }) => (
-  <div className="flex items-center gap-3">
-    <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-      <Icon className="w-4 h-4" />
-    </div>
-    <span className="text-white/90">{text}</span>
-  </div>
-);
-
-// Need to import MapPin for the Feature component
-import { MapPin, Wallet } from 'lucide-react';
 
 export default Register;
