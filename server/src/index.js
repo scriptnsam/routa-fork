@@ -25,9 +25,7 @@ const activeOrders = new Map();
 
 io.on('connection', (socket) => {
   const { userId, userRole } = socket.handshake.auth;
-  console.log(`✅ User connected: ${userId} (${userRole}) - Socket: ${socket.id}`);
-
-  // ==================== DRIVER EVENTS ====================
+  console.log(`User connected: ${userId} (${userRole}) - Socket: ${socket.id}`);
 
   // Driver goes online
   socket.on('driver:available', (data) => {
@@ -37,15 +35,14 @@ io.on('connection', (socket) => {
       status: 'available',
       timestamp: data.timestamp
     });
-    console.log(`🚗 Driver ${data.driverId} is now ONLINE`);
-    console.log(`📊 Active drivers: ${activeDrivers.size}`);
+    console.log(`Driver ${data.driverId} is now ONLINE`);
+    console.log(`Active drivers: ${activeDrivers.size}`);
   });
 
   // Driver goes offline
   socket.on('driver:unavailable', (data) => {
     activeDrivers.delete(data.driverId);
-    console.log(`🚗 Driver ${data.driverId} is now OFFLINE`);
-    console.log(`📊 Active drivers: ${activeDrivers.size}`);
+    console.log(`Driver ${data.driverId} is now OFFLINE`);
   });
 
   // Driver location update
@@ -55,7 +52,6 @@ io.on('connection', (socket) => {
       driver.location = data.location;
       driver.timestamp = data.timestamp;
       
-      // If driver has an active order, notify the customer
       if (driver.currentOrder) {
         io.to(`order:${driver.currentOrder}`).emit('driver:location', {
           driverId: data.driverId,
@@ -66,23 +62,18 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ==================== ORDER EVENTS ====================
-
   // New order created
   socket.on('order:create', (order) => {
-    console.log(`📦 New order created: ${order.id}`);
+    console.log(`New order created: ${order.id}`);
     
-    // Store the order
     activeOrders.set(order.id, {
       ...order,
       status: 'pending',
       createdAt: new Date().toISOString()
     });
 
-    // Join the customer to the order room
     socket.join(`order:${order.id}`);
 
-    // Find nearby available drivers and send them the order
     let notifiedDrivers = 0;
     activeDrivers.forEach((driver, driverId) => {
       if (driver.status === 'available') {
@@ -91,7 +82,7 @@ io.on('connection', (socket) => {
       }
     });
 
-    console.log(`📤 Order sent to ${notifiedDrivers} available drivers`);
+    console.log(`Order sent to ${notifiedDrivers} available drivers`);
   });
 
   // Driver accepts order
@@ -101,16 +92,13 @@ io.on('connection', (socket) => {
     const order = activeOrders.get(orderId);
 
     if (driver && order) {
-      // Update driver status
       driver.status = 'busy';
       driver.currentOrder = orderId;
 
-      // Update order status
       order.status = 'accepted';
       order.driverId = driverId;
       order.acceptedAt = new Date().toISOString();
 
-      // Notify customer that order was accepted
       io.to(`order:${orderId}`).emit('order:update', {
         orderId,
         status: 'accepted',
@@ -118,24 +106,20 @@ io.on('connection', (socket) => {
         driverLocation: driver.location
       });
 
-      // Notify other drivers to remove this order from their list
       activeDrivers.forEach((d, id) => {
         if (id !== driverId && d.status === 'available') {
           io.to(d.socketId).emit('order:taken', { orderId });
         }
       });
 
-      // Join driver to order room for updates
       socket.join(`order:${orderId}`);
-
-      console.log(`✅ Order ${orderId} accepted by driver ${driverId}`);
+      console.log(`Order ${orderId} accepted by driver ${driverId}`);
     }
   });
 
   // Driver rejects order
   socket.on('order:reject', (data) => {
-    console.log(`❌ Driver ${data.driverId} rejected order ${data.orderId}`);
-    // Could implement logic to track rejections or find another driver
+    console.log(`Driver ${data.driverId} rejected order ${data.orderId}`);
   });
 
   // Order status update
@@ -147,29 +131,26 @@ io.on('connection', (socket) => {
       order.status = status;
       order.updatedAt = new Date().toISOString();
 
-      // Notify everyone in the order room (customer + driver)
       io.to(`order:${orderId}`).emit('order:update', {
         orderId,
         status,
         updatedAt: order.updatedAt
       });
 
-      console.log(`📝 Order ${orderId} status updated to: ${status}`);
+      console.log(`Order ${orderId} status updated to: ${status}`);
 
-      // If delivered, free up the driver
       if (status === 'delivered') {
         activeDrivers.forEach((driver, driverId) => {
           if (driver.currentOrder === orderId) {
             driver.status = 'available';
             driver.currentOrder = null;
-            console.log(`🚗 Driver ${driverId} is now available again`);
+            console.log(`Driver ${driverId} is now available again`);
           }
         });
 
-        // Remove order from active orders after some time
         setTimeout(() => {
           activeOrders.delete(orderId);
-        }, 60000); // Keep for 1 minute for reference
+        }, 60000);
       }
     }
   });
@@ -177,32 +158,27 @@ io.on('connection', (socket) => {
   // Customer subscribes to order updates
   socket.on('order:subscribe', (data) => {
     socket.join(`order:${data.orderId}`);
-    console.log(`👁️ User subscribed to order: ${data.orderId}`);
+    console.log(`User subscribed to order: ${data.orderId}`);
   });
 
   // Customer unsubscribes from order updates
   socket.on('order:unsubscribe', (data) => {
     socket.leave(`order:${data.orderId}`);
-    console.log(`👁️ User unsubscribed from order: ${data.orderId}`);
   });
 
-  // ==================== DISCONNECT ====================
-
+  // Disconnect
   socket.on('disconnect', () => {
-    // Remove driver from active pool if they disconnect
     activeDrivers.forEach((driver, driverId) => {
       if (driver.socketId === socket.id) {
         activeDrivers.delete(driverId);
-        console.log(`🚗 Driver ${driverId} disconnected and removed from pool`);
+        console.log(`Driver ${driverId} disconnected`);
       }
     });
-    console.log(`❌ User disconnected: ${socket.id}`);
+    console.log(`User disconnected: ${socket.id}`);
   });
 });
 
-// ==================== REST API ENDPOINTS ====================
-
-// Health check
+// REST API Endpoints
 app.get('/', (req, res) => {
   res.json({ 
     status: 'ok', 
@@ -212,7 +188,6 @@ app.get('/', (req, res) => {
   });
 });
 
-// Get active drivers (for admin/debugging)
 app.get('/api/drivers', (req, res) => {
   const drivers = [];
   activeDrivers.forEach((driver, id) => {
@@ -221,7 +196,24 @@ app.get('/api/drivers', (req, res) => {
   res.json(drivers);
 });
 
-// Get active orders (for admin/debugging)
 app.get('/api/orders', (req, res) => {
   const orders = [];
-  
+  activeOrders.forEach((order, id) => {
+    orders.push({ id, ...order });
+  });
+  res.json(orders);
+});
+
+// Start Server
+const PORT = process.env.PORT || 3001;
+
+server.listen(PORT, () => {
+  console.log('');
+  console.log('=================================');
+  console.log('  Routa Socket Server Running!');
+  console.log('=================================');
+  console.log(`  URL: http://localhost:${PORT}`);
+  console.log('  Waiting for connections...');
+  console.log('=================================');
+  console.log('');
+});
