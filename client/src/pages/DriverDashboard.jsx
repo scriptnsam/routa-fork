@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet-routing-machine';
 import {
   Package,
-  MapPin,
-  Navigation,
   Clock,
   Check,
   X,
@@ -15,80 +14,106 @@ import {
   Star,
   Phone,
   MessageSquare,
-  Route,
-  DollarSign
+  Navigation,
+  ChevronRight,
+  Menu,
+  User,
+  Wallet,
+  History,
+  Settings,
+  HelpCircle,
+  LogOut,
+  TrendingUp,
+  MapPin,
+  AlertCircle
 } from 'lucide-react';
 import socketService from '../services/socketService';
 
-// Custom icons
-const createIcon = (color, emoji = '') => {
+// Fix Leaflet default icons
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+// Custom marker icons
+const createCustomIcon = (color, symbol) => {
   return L.divIcon({
-    className: 'custom-marker',
+    className: 'custom-div-icon',
     html: `
       <div style="
-        width: 40px;
-        height: 40px;
         background: ${color};
-        border: 3px solid white;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
+        border: 3px solid white;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        font-size: 18px;
-      ">
-        ${emoji}
-      </div>
+        box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        font-size: 16px;
+      ">${symbol}</div>
     `,
-    iconSize: [40, 40],
-    iconAnchor: [20, 20],
-    popupAnchor: [0, -20]
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
   });
 };
 
-const driverIcon = createIcon('#3b82f6', '🚗');
-const pickupIcon = createIcon('#22c55e', '📍');
-const dropoffIcon = createIcon('#ef4444', '🏁');
+const driverIcon = createCustomIcon('#3b82f6', '🚗');
+const pickupIcon = createCustomIcon('#22c55e', '📦');
+const dropoffIcon = createCustomIcon('#ef4444', '📍');
 
-// Routing component for driver dashboard
-const DriverRouting = ({ from, to, map }) => {
-  const routingControlRef = useRef(null);
+// Routing Machine Component
+const RoutingControl = ({ from, to }) => {
+  const map = useMap();
+  const routingRef = useRef(null);
 
   useEffect(() => {
-    if (!from || !to || !map) return;
+    if (!from || !to) return;
 
-    // Remove existing routing control
-    if (routingControlRef.current) {
-      map.removeControl(routingControlRef.current);
+    // Clean up previous route
+    if (routingRef.current) {
+      try {
+        map.removeControl(routingRef.current);
+      } catch (e) {
+        // Ignore cleanup errors
+      }
     }
 
-    routingControlRef.current = L.Routing.control({
-      waypoints: [
-        L.latLng(from.lat, from.lng),
-        L.latLng(to.lat, to.lng)
-      ],
-      routeWhileDragging: false,
-      showAlternatives: false,
-      fitSelectedRoutes: true,
-      lineOptions: {
-        styles: [{ color: '#3b82f6', weight: 5, opacity: 0.8 }]
-      },
-      createMarker: () => null,
-      router: L.Routing.osrmv1({
-        serviceUrl: 'https://router.project-osrm.org/route/v1',
-        profile: 'driving'
-      })
-    }).addTo(map);
+    try {
+      routingRef.current = L.Routing.control({
+        waypoints: [
+          L.latLng(from.lat, from.lng),
+          L.latLng(to.lat, to.lng)
+        ],
+        routeWhileDragging: false,
+        addWaypoints: false,
+        draggableWaypoints: false,
+        fitSelectedRoutes: true,
+        showAlternatives: false,
+        lineOptions: {
+          styles: [{ color: '#3b82f6', weight: 5, opacity: 0.7 }]
+        },
+        createMarker: () => null,
+      }).addTo(map);
 
-    // Hide the routing panel
-    const container = document.querySelector('.leaflet-routing-container');
-    if (container) {
-      container.style.display = 'none';
+      // Hide the instructions panel
+      setTimeout(() => {
+        const container = document.querySelector('.leaflet-routing-container');
+        if (container) container.style.display = 'none';
+      }, 100);
+    } catch (error) {
+      console.log('Routing error:', error);
     }
 
     return () => {
-      if (routingControlRef.current) {
-        map.removeControl(routingControlRef.current);
+      if (routingRef.current) {
+        try {
+          map.removeControl(routingRef.current);
+        } catch (e) {
+          // Ignore cleanup errors
+        }
       }
     };
   }, [from, to, map]);
@@ -96,138 +121,79 @@ const DriverRouting = ({ from, to, map }) => {
   return null;
 };
 
-// Map wrapper component
-const DriverMap = ({ currentLocation, activeOrder, orderStatus }) => {
-  const [map, setMap] = useState(null);
-
-  const getDestination = () => {
-    if (!activeOrder) return null;
-    
-    if (orderStatus === 'picked_up' || orderStatus === 'arrived_dropoff') {
-      return activeOrder.dropoff;
+// Map Center Component
+const MapCenter = ({ position }) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (position) {
+      map.setView([position.lat, position.lng], map.getZoom());
     }
-    return activeOrder.pickup;
-  };
-
-  return (
-    <MapContainer
-      center={currentLocation ? [currentLocation.lat, currentLocation.lng] : [6.5244, 3.3792]}
-      zoom={15}
-      style={{ height: '300px', width: '100%' }}
-      ref={setMap}
-      whenCreated={setMap}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-
-      {/* Driver Location */}
-      {currentLocation && (
-        <Marker position={[currentLocation.lat, currentLocation.lng]} icon={driverIcon}>
-          <Popup>Your Location</Popup>
-        </Marker>
-      )}
-
-      {/* Active Order Markers */}
-      {activeOrder && (
-        <>
-          <Marker 
-            position={[activeOrder.pickup.lat, activeOrder.pickup.lng]} 
-            icon={pickupIcon}
-          >
-            <Popup>Pickup: {activeOrder.pickup.address}</Popup>
-          </Marker>
-          <Marker 
-            position={[activeOrder.dropoff.lat, activeOrder.dropoff.lng]} 
-            icon={dropoffIcon}
-          >
-            <Popup>Dropoff: {activeOrder.dropoff.address}</Popup>
-          </Marker>
-        </>
-      )}
-
-      {/* Route */}
-      {currentLocation && activeOrder && map && (
-        <DriverRouting
-          from={currentLocation}
-          to={getDestination()}
-          map={map}
-        />
-      )}
-    </MapContainer>
-  );
+  }, [position, map]);
+  
+  return null;
 };
 
+// Main Driver Dashboard Component
 const DriverDashboard = () => {
   const [isOnline, setIsOnline] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [pendingOrders, setPendingOrders] = useState([]);
   const [activeOrder, setActiveOrder] = useState(null);
   const [orderStatus, setOrderStatus] = useState(null);
-  const [earnings, setEarnings] = useState({ today: 0, week: 0 });
-  const [stats, setStats] = useState({ completed: 0, rating: 4.9 });
+  const [earnings, setEarnings] = useState({ today: 0, week: 15500, total: 125000 });
+  const [stats, setStats] = useState({ completed: 47, rating: 4.9, acceptance: 95 });
+  
+  const driverId = 'driver-123'; // Get from auth in real app
 
-  // Mock driver ID - in real app, get from auth
-  const driverId = 'driver-123';
-
-  // Get driver's current location
+  // Watch location
   useEffect(() => {
-    if (navigator.geolocation) {
-      const watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const location = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          };
-          setCurrentLocation(location);
-          
-          // Update location on server if online
-          if (isOnline) {
-            socketService.updateDriverLocation(driverId, location);
-          }
-        },
-        (error) => console.error('Location error:', error),
-        { enableHighAccuracy: true, maximumAge: 10000 }
-      );
-
-      return () => navigator.geolocation.clearWatch(watchId);
+    if (!navigator.geolocation) {
+      console.log('Geolocation not supported');
+      return;
     }
-  }, [isOnline]);
 
-  // Connect to socket and listen for orders
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setCurrentLocation(loc);
+        if (isOnline) {
+          socketService.updateDriverLocation(driverId, loc);
+        }
+      },
+      (err) => console.log('Location error:', err),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [isOnline, driverId]);
+
+  // Socket connection
   useEffect(() => {
     socketService.connect(driverId, 'driver');
 
-    // Listen for new orders
     socketService.onNewOrder((order) => {
-      console.log('New order received:', order);
       setPendingOrders((prev) => {
-        // Avoid duplicates
-        if (prev.find(o => o.id === order.id)) return prev;
-        return [...prev, order];
+        if (prev.find((o) => o.id === order.id)) return prev;
+        return [order, ...prev];
       });
-      
-      playNotificationSound();
-      showBrowserNotification(order);
+      playSound();
+      showNotification(order);
     });
 
-    // Listen for order taken by another driver
     socketService.onOrderTaken((data) => {
       setPendingOrders((prev) => prev.filter((o) => o.id !== data.orderId));
     });
 
-    // Listen for order updates
     socketService.onOrderUpdate((update) => {
-      if (update.orderId === activeOrder?.id) {
+      if (activeOrder?.id === update.orderId) {
         setOrderStatus(update.status);
       }
     });
 
-    return () => {
-      socketService.disconnect();
-    };
-  }, [activeOrder]);
+    return () => socketService.disconnect();
+  }, [activeOrder, driverId]);
 
   // Request notification permission
   useEffect(() => {
@@ -236,14 +202,30 @@ const DriverDashboard = () => {
     }
   }, []);
 
-  // Toggle online status
-  const toggleOnlineStatus = () => {
+  const playSound = () => {
+    try {
+      new Audio('/notification.mp3').play();
+    } catch (e) {
+      console.log('Sound not available');
+    }
+  };
+
+  const showNotification = (order) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('New Order Request', {
+        body: `₦${order.price?.toLocaleString()} • ${order.distance || 'N/A'}`,
+        icon: '/logo.png'
+      });
+    }
+  };
+
+  const toggleOnline = () => {
     if (!isOnline) {
       if (currentLocation) {
         socketService.joinDriverPool(driverId, currentLocation);
         setIsOnline(true);
       } else {
-        alert('Please enable location services to go online');
+        alert('Enable location to go online');
       }
     } else {
       socketService.leaveDriverPool(driverId);
@@ -251,28 +233,6 @@ const DriverDashboard = () => {
     }
   };
 
-  // Play notification sound
-  const playNotificationSound = () => {
-    try {
-      const audio = new Audio('/notification.mp3');
-      audio.play().catch(console.error);
-    } catch (error) {
-      console.log('Could not play notification sound');
-    }
-  };
-
-  // Show browser notification
-  const showBrowserNotification = (order) => {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('New Delivery Request!', {
-        body: `₦${order.price?.toLocaleString()} - ${order.distance}`,
-        icon: '/logo.png',
-        requireInteraction: true
-      });
-    }
-  };
-
-  // Accept order
   const acceptOrder = (order) => {
     socketService.acceptOrder(order.id, driverId);
     setActiveOrder(order);
@@ -280,322 +240,490 @@ const DriverDashboard = () => {
     setPendingOrders((prev) => prev.filter((o) => o.id !== order.id));
   };
 
-  // Reject order
-  const rejectOrder = (orderId) => {
+  const declineOrder = (orderId) => {
     socketService.rejectOrder(orderId, driverId);
     setPendingOrders((prev) => prev.filter((o) => o.id !== orderId));
   };
 
-  // Update order status
-  const updateStatus = (status) => {
-    if (activeOrder) {
-      socketService.updateOrderStatus(activeOrder.id, status);
-      setOrderStatus(status);
+  const updateOrderStatus = (newStatus) => {
+    if (!activeOrder) return;
+    
+    socketService.updateOrderStatus(activeOrder.id, newStatus);
+    setOrderStatus(newStatus);
 
-      if (status === 'delivered') {
-        // Order completed
-        setEarnings((prev) => ({
-          today: prev.today + (activeOrder.driverEarnings || 500),
-          week: prev.week + (activeOrder.driverEarnings || 500)
-        }));
-        setStats((prev) => ({ ...prev, completed: prev.completed + 1 }));
-        setActiveOrder(null);
-        setOrderStatus(null);
-      }
+    if (newStatus === 'delivered') {
+      const earned = activeOrder.driverEarnings || activeOrder.price * 0.8 || 500;
+      setEarnings((prev) => ({
+        ...prev,
+        today: prev.today + earned,
+        total: prev.total + earned
+      }));
+      setStats((prev) => ({ ...prev, completed: prev.completed + 1 }));
+      setActiveOrder(null);
+      setOrderStatus(null);
     }
   };
 
-  // Get status button config
-  const getStatusButton = () => {
-    switch (orderStatus) {
-      case 'accepted':
-        return { text: 'Arrived at Pickup', nextStatus: 'arrived_pickup', color: 'bg-blue-600' };
-      case 'arrived_pickup':
-        return { text: 'Package Picked Up', nextStatus: 'picked_up', color: 'bg-blue-600' };
-      case 'picked_up':
-        return { text: 'Arrived at Dropoff', nextStatus: 'arrived_dropoff', color: 'bg-blue-600' };
-      case 'arrived_dropoff':
-        return { text: 'Complete Delivery', nextStatus: 'delivered', color: 'bg-green-600' };
-      default:
-        return null;
-    }
+  const getNextAction = () => {
+    const actions = {
+      accepted: { label: 'Arrived at Pickup', next: 'arrived_pickup' },
+      arrived_pickup: { label: 'Start Delivery', next: 'picked_up' },
+      picked_up: { label: 'Arrived at Dropoff', next: 'arrived_dropoff' },
+      arrived_dropoff: { label: 'Complete Delivery', next: 'delivered' }
+    };
+    return actions[orderStatus] || null;
   };
 
-  const statusButton = getStatusButton();
+  const getStatusLabel = () => {
+    const labels = {
+      accepted: 'Go to pickup location',
+      arrived_pickup: 'Waiting for package',
+      picked_up: 'Heading to dropoff',
+      arrived_dropoff: 'Confirm delivery'
+    };
+    return labels[orderStatus] || '';
+  };
+
+  const getDestination = () => {
+    if (!activeOrder) return null;
+    return ['picked_up', 'arrived_dropoff'].includes(orderStatus) 
+      ? activeOrder.dropoff 
+      : activeOrder.pickup;
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-screen flex flex-col bg-gray-100">
+      {/* Sidebar Overlay */}
+      <AnimatePresence>
+        {showSidebar && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black z-40"
+              onClick={() => setShowSidebar(false)}
+            />
+            <motion.div
+              initial={{ x: -300 }}
+              animate={{ x: 0 }}
+              exit={{ x: -300 }}
+              transition={{ type: 'tween' }}
+              className="fixed left-0 top-0 h-full w-72 bg-white z-50 shadow-xl"
+            >
+              {/* Profile Section */}
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center text-2xl">
+                    👨‍✈️
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">John Driver</h3>
+                    <div className="flex items-center gap-1 text-sm text-blue-100">
+                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                      <span>{stats.rating} Rating</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-between text-sm">
+                  <span className="text-blue-100">Total Earnings</span>
+                  <span className="font-bold">₦{earnings.total.toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Menu Items */}
+              <nav className="p-4 space-y-1">
+                {[
+                  { icon: User, label: 'My Profile', path: '/driver/profile' },
+                  { icon: Wallet, label: 'Earnings', path: '/driver/earnings' },
+                  { icon: History, label: 'Trip History', path: '/driver/history' },
+                  { icon: TrendingUp, label: 'Performance', path: '/driver/performance' },
+                  { icon: Settings, label: 'Settings', path: '/driver/settings' },
+                  { icon: HelpCircle, label: 'Help & Support', path: '/driver/support' },
+                ].map((item) => (
+                  <Link
+                    key={item.label}
+                    to={item.path}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 transition"
+                    onClick={() => setShowSidebar(false)}
+                  >
+                    <item.icon className="w-5 h-5 text-gray-500" />
+                    <span>{item.label}</span>
+                    <ChevronRight className="w-4 h-4 ml-auto text-gray-400" />
+                  </Link>
+                ))}
+              </nav>
+
+              {/* Logout */}
+              <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
+                <button className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-red-600 hover:bg-red-50 transition">
+                  <LogOut className="w-5 h-5" />
+                  <span>Log Out</span>
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
-      <header className="bg-white shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-50">
+      <header className="bg-white px-4 py-3 flex items-center justify-between shadow-sm z-30">
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="Routa" className="w-10 h-10" />
-          <div>
-            <h1 className="font-bold text-lg">Driver Mode</h1>
-            <p className={`text-sm ${isOnline ? 'text-green-600' : 'text-gray-500'}`}>
-              {isOnline ? '● Online' : '○ Offline'}
-            </p>
+          <button 
+            onClick={() => setShowSidebar(true)}
+            className="p-2 hover:bg-gray-100 rounded-full transition"
+          >
+            <Menu className="w-6 h-6 text-gray-700" />
+          </button>
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="Routa" className="w-8 h-8 object-contain" />
+            <span className="font-bold text-gray-900">Routa</span>
           </div>
         </div>
-        
+
+        {/* Online Toggle */}
         <button
-          onClick={toggleOnlineStatus}
-          className={`px-4 py-2 rounded-full font-medium flex items-center gap-2 transition ${
-            isOnline 
-              ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          onClick={toggleOnline}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition ${
+            isOnline
+              ? 'bg-green-500 text-white shadow-lg shadow-green-200'
+              : 'bg-gray-200 text-gray-600'
           }`}
         >
           <Power className="w-5 h-5" />
-          {isOnline ? 'Go Offline' : 'Go Online'}
+          <span>{isOnline ? 'Online' : 'Offline'}</span>
         </button>
       </header>
 
-      {/* Stats Bar */}
-      <div className="bg-white border-b px-4 py-3">
-        <div className="flex items-center justify-around">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-green-600">₦{earnings.today.toLocaleString()}</p>
-            <p className="text-xs text-gray-500">Today's Earnings</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-gray-900">{stats.completed}</p>
-            <p className="text-xs text-gray-500">Deliveries</p>
-          </div>
-          <div className="text-center flex flex-col items-center">
-            <div className="flex items-center gap-1">
-              <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-              <p className="text-2xl font-bold text-gray-900">{stats.rating}</p>
-            </div>
-            <p className="text-xs text-gray-500">Rating</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="p-4 space-y-4">
-        {/* Map */}
-        <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
-          <DriverMap
-            currentLocation={currentLocation}
-            activeOrder={activeOrder}
-            orderStatus={orderStatus}
+      {/* Map Container */}
+      <div className="flex-1 relative">
+        <MapContainer
+          center={currentLocation ? [currentLocation.lat, currentLocation.lng] : [6.5244, 3.3792]}
+          zoom={15}
+          style={{ height: '100%', width: '100%' }}
+          zoomControl={false}
+        >
+          <TileLayer
+            attribution='&copy; OpenStreetMap'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-        </div>
+          
+          <MapCenter position={currentLocation} />
 
-        {/* Pending Orders */}
-        <AnimatePresence>
-          {pendingOrders.map((order) => (
-            <motion.div
-              key={order.id}
-              initial={{ opacity: 0, y: 50, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, x: -100 }}
-              className="bg-white rounded-2xl shadow-lg border-2 border-blue-500 overflow-hidden"
-            >
-              {/* Order Header */}
-              <div className="bg-blue-500 text-white px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Bell className="w-5 h-5 animate-bounce" />
-                  <span className="font-bold">New Delivery Request!</span>
-                </div>
-                <div className="text-xl font-bold">₦{order.price?.toLocaleString()}</div>
-              </div>
+          {/* Driver Marker */}
+          {currentLocation && (
+            <Marker position={[currentLocation.lat, currentLocation.lng]} icon={driverIcon}>
+              <Popup>Your location</Popup>
+            </Marker>
+          )}
 
-              {/* Order Details */}
-              <div className="p-4 space-y-3">
-                <div className="flex items-start gap-3">
-                  <div className="w-3 h-3 bg-green-500 rounded-full mt-1.5"></div>
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500 uppercase">Pickup</p>
-                    <p className="font-medium text-sm">{order.pickup?.address}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <div className="w-3 h-3 bg-red-500 rounded-full mt-1.5"></div>
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500 uppercase">Dropoff</p>
-                    <p className="font-medium text-sm">{order.dropoff?.address}</p>
-                  </div>
-                </div>
+          {/* Order Markers */}
+          {activeOrder?.pickup && (
+            <Marker position={[activeOrder.pickup.lat, activeOrder.pickup.lng]} icon={pickupIcon}>
+              <Popup>Pickup: {activeOrder.pickup.address}</Popup>
+            </Marker>
+          )}
+          {activeOrder?.dropoff && (
+            <Marker position={[activeOrder.dropoff.lat, activeOrder.dropoff.lng]} icon={dropoffIcon}>
+              <Popup>Dropoff: {activeOrder.dropoff.address}</Popup>
+            </Marker>
+          )}
 
-                <div className="flex items-center gap-4 text-sm text-gray-600 pt-2 border-t">
-                  <div className="flex items-center gap-1">
-                    <Route className="w-4 h-4" />
-                    <span>{order.distance}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    <span>{order.duration}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Package className="w-4 h-4" />
-                    <span>{order.packageType || 'Package'}</span>
-                  </div>
-                </div>
+          {/* Route */}
+          {currentLocation && activeOrder && (
+            <RoutingControl from={currentLocation} to={getDestination()} />
+          )}
+        </MapContainer>
 
-                {/* Customer Info */}
-                {order.customer && (
-                  <div className="flex items-center gap-3 pt-2 border-t">
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-lg">
-                      👤
-                    </div>
-                    <div>
-                      <p className="font-medium">{order.customer.name}</p>
-                      <div className="flex items-center gap-1 text-sm text-gray-500">
-                        <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                        <span>{order.customer.rating || '4.5'}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex gap-3 pt-2">
-                  <button
-                    onClick={() => rejectOrder(order.id)}
-                    className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition flex items-center justify-center gap-2"
-                  >
-                    <X className="w-5 h-5" />
-                    Decline
-                  </button>
-                  <button
-                    onClick={() => acceptOrder(order)}
-                    className="flex-1 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition flex items-center justify-center gap-2"
-                  >
-                    <Check className="w-5 h-5" />
-                    Accept
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-
-        {/* Active Order */}
-        {activeOrder && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-sm p-4 space-y-4"
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-lg">Active Delivery</h3>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                orderStatus === 'picked_up' || orderStatus === 'arrived_dropoff'
-                  ? 'bg-blue-100 text-blue-700' 
-                  : 'bg-yellow-100 text-yellow-700'
-              }`}>
-                {orderStatus === 'picked_up' ? 'En Route to Dropoff' : 
-                 orderStatus === 'arrived_dropoff' ? 'At Dropoff' :
-                 orderStatus === 'arrived_pickup' ? 'At Pickup' : 
-                 'Heading to Pickup'}
-              </span>
-            </div>
-
-            {/* Locations */}
-            <div className="space-y-2">
-              <div className="flex items-start gap-3">
-                <div className={`w-3 h-3 rounded-full mt-1.5 ${
-                  orderStatus === 'picked_up' || orderStatus === 'arrived_dropoff' 
-                    ? 'bg-gray-300' : 'bg-green-500'
-                }`}></div>
+        {/* Stats Overlay - Only when online and no active order */}
+        {isOnline && !activeOrder && pendingOrders.length === 0 && (
+          <div className="absolute top-4 left-4 right-4 z-20">
+            <div className="bg-white rounded-2xl shadow-lg p-4">
+              <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <p className="text-xs text-gray-500">PICKUP</p>
-                  <p className="font-medium text-sm">{activeOrder.pickup?.address}</p>
+                  <p className="text-2xl font-bold text-green-600">₦{earnings.today.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500">Today</p>
                 </div>
-              </div>
-              
-              <div className="flex items-start gap-3">
-                <div className={`w-3 h-3 rounded-full mt-1.5 ${
-                  orderStatus === 'picked_up' || orderStatus === 'arrived_dropoff' 
-                    ? 'bg-red-500' : 'bg-gray-300'
-                }`}></div>
                 <div>
-                  <p className="text-xs text-gray-500">DROPOFF</p>
-                  <p className="font-medium text-sm">{activeOrder.dropoff?.address}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.completed}</p>
+                  <p className="text-xs text-gray-500">Trips</p>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="flex items-center gap-1">
+                    <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                    <span className="text-2xl font-bold text-gray-900">{stats.rating}</span>
+                  </div>
+                  <p className="text-xs text-gray-500">Rating</p>
                 </div>
               </div>
             </div>
-
-            {/* Earnings */}
-            <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl">
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-green-600" />
-                <span className="text-green-700">You'll earn</span>
-              </div>
-              <span className="font-bold text-green-700 text-lg">
-                ₦{(activeOrder.driverEarnings || activeOrder.price * 0.8)?.toLocaleString()}
-              </span>
-            </div>
-
-            {/* Customer Contact */}
-            {activeOrder.customer && (
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-xl">
-                    👤
-                  </div>
-                  <div>
-                    <p className="font-medium">{activeOrder.customer.name}</p>
-                    <p className="text-sm text-gray-500">Customer</p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <a
-                    href={`tel:${activeOrder.customer.phone || ''}`}
-                    className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 hover:bg-green-200 transition"
-                  >
-                    <Phone className="w-5 h-5" />
-                  </a>
-                  <button className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-200 transition">
-                    <MessageSquare className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Status Update Button */}
-            {statusButton && (
-              <button
-                onClick={() => updateStatus(statusButton.nextStatus)}
-                className={`w-full py-4 ${statusButton.color} text-white rounded-xl font-semibold hover:opacity-90 transition flex items-center justify-center gap-2`}
-              >
-                {statusButton.nextStatus === 'delivered' && <Check className="w-5 h-5" />}
-                {statusButton.text}
-              </button>
-            )}
-          </motion.div>
+          </div>
         )}
 
-        {/* Empty State - Online but no orders */}
-        {isOnline && pendingOrders.length === 0 && !activeOrder && (
-          <div className="text-center py-12">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Package className="w-10 h-10 text-gray-400" />
+        {/* Waiting for Orders */}
+        {isOnline && !activeOrder && pendingOrders.length === 0 && (
+          <div className="absolute bottom-24 left-4 right-4 z-20">
+            <div className="bg-white rounded-2xl shadow-lg p-6 text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Navigation className="w-8 h-8 text-blue-600 animate-pulse" />
+              </div>
+              <h3 className="font-bold text-lg text-gray-900 mb-1">Looking for orders...</h3>
+              <p className="text-gray-500 text-sm">Stay in a busy area to get more requests</p>
             </div>
-            <h3 className="font-bold text-lg text-gray-900 mb-2">Waiting for orders</h3>
-            <p className="text-gray-500">New delivery requests will appear here</p>
           </div>
         )}
 
         {/* Offline State */}
         {!isOnline && (
-          <div className="text-center py-12">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Power className="w-10 h-10 text-gray-400" />
+          <div className="absolute bottom-24 left-4 right-4 z-20">
+            <div className="bg-white rounded-2xl shadow-lg p-6 text-center">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Power className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="font-bold text-lg text-gray-900 mb-1">You're Offline</h3>
+              <p className="text-gray-500 text-sm mb-4">Go online to start receiving orders</p>
+              <button
+                onClick={toggleOnline}
+                className="w-full py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition"
+              >
+                Go Online
+              </button>
             </div>
-            <h3 className="font-bold text-lg text-gray-900 mb-2">You're offline</h3>
-            <p className="text-gray-500 mb-4">Go online to start receiving delivery requests</p>
-            <button
-              onClick={toggleOnlineStatus}
-              className="px-6 py-3 bg-green-600 text-white rounded-full font-semibold hover:bg-green-700 transition"
-            >
-              Go Online
-            </button>
           </div>
         )}
       </div>
+
+      {/* New Order Request Card */}
+      <AnimatePresence>
+        {pendingOrders.length > 0 && (
+          <motion.div
+            initial={{ y: 300, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 300, opacity: 0 }}
+            className="absolute bottom-0 left-0 right-0 z-30"
+          >
+            <div className="bg-white rounded-t-3xl shadow-2xl overflow-hidden">
+              {/* Order Header */}
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                      <Bell className="w-5 h-5 text-white animate-bounce" />
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold">New Order Request</p>
+                      <p className="text-blue-100 text-sm">{pendingOrders.length} pending</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-white">
+                      ₦{pendingOrders[0]?.price?.toLocaleString() || '0'}
+                    </p>
+                    <p className="text-blue-100 text-sm">
+                      {pendingOrders[0]?.distance || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Order Details */}
+              <div className="p-6 space-y-4">
+                {/* Locations */}
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <div className="w-3 h-3 bg-green-500 rounded-full" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500 font-medium uppercase">Pickup</p>
+                      <p className="text-gray-900 font-medium">
+                        {pendingOrders[0]?.pickup?.address || 'Loading...'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="ml-4 border-l-2 border-dashed border-gray-200 h-4" />
+
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <MapPin className="w-4 h-4 text-red-500" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500 font-medium uppercase">Dropoff</p>
+                      <p className="text-gray-900 font-medium">
+                        {pendingOrders[0]?.dropoff?.address || 'Loading...'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Trip Info */}
+                <div className="flex items-center justify-between py-3 border-t border-b border-gray-100">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1 text-gray-600">
+                      <Clock className="w-4 h-4" />
+                      <span className="text-sm">{pendingOrders[0]?.duration || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-gray-600">
+                      <Package className="w-4 h-4" />
+                      <span className="text-sm">{pendingOrders[0]?.packageType || 'Package'}</span>
+                    </div>
+                  </div>
+                  {pendingOrders[0]?.customer && (
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-sm">
+                        👤
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {pendingOrders[0].customer.name || 'Customer'}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                          <span className="text-xs text-gray-500">
+                            {pendingOrders[0].customer.rating || '4.5'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => declineOrder(pendingOrders[0].id)}
+                    className="flex-1 py-4 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition flex items-center justify-center gap-2"
+                  >
+                    <X className="w-5 h-5" />
+                    Decline
+                  </button>
+                  <button
+                    onClick={() => acceptOrder(pendingOrders[0])}
+                    className="flex-[2] py-4 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition flex items-center justify-center gap-2"
+                  >
+                    <Check className="w-5 h-5" />
+                    Accept Order
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Active Order Panel */}
+      {activeOrder && (
+        <div className="absolute bottom-0 left-0 right-0 z-30">
+          <div className="bg-white rounded-t-3xl shadow-2xl">
+            {/* Status Banner */}
+            <div className={`px-6 py-3 ${
+              ['picked_up', 'arrived_dropoff'].includes(orderStatus)
+                ? 'bg-blue-600'
+                : 'bg-yellow-500'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-white" />
+                  <span className="text-white font-medium">{getStatusLabel()}</span>
+                </div>
+                <span className="text-white/80 text-sm">
+                  {activeOrder.distance || ''}
+                </span>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              {/* Locations */}
+              <div className="space-y-3">
+                <div className={`flex items-start gap-3 ${
+                  ['picked_up', 'arrived_dropoff'].includes(orderStatus) ? 'opacity-50' : ''
+                }`}>
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Check className={`w-4 h-4 ${
+                      ['picked_up', 'arrived_dropoff'].includes(orderStatus) 
+                        ? 'text-green-500' 
+                        : 'text-gray-300'
+                    }`} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">Pickup</p>
+                    <p className="text-gray-900 font-medium text-sm">
+                      {activeOrder.pickup?.address || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="ml-4 border-l-2 border-dashed border-gray-200 h-3" />
+
+                <div className={`flex items-start gap-3 ${
+                  !['picked_up', 'arrived_dropoff'].includes(orderStatus) ? 'opacity-50' : ''
+                }`}>
+                  <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <MapPin className="w-4 h-4 text-red-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">Dropoff</p>
+                    <p className="text-gray-900 font-medium text-sm">
+                      {activeOrder.dropoff?.address || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Customer & Earnings */}
+              <div className="flex items-center justify-between py-3 bg-gray-50 rounded-xl px-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-xl">
+                    👤
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {activeOrder.customer?.name || 'Customer'}
+                    </p>
+                    <p className="text-sm text-gray-500">Customer</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={`tel:${activeOrder.customer?.phone || ''}`}
+                    className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white hover:bg-green-600 transition"
+                  >
+                    <Phone className="w-5 h-5" />
+                  </a>
+                  <button className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white hover:bg-blue-600 transition">
+                    <MessageSquare className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Earnings Badge */}
+              <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl">
+                <span className="text-green-700 font-medium">Your Earnings</span>
+                <span className="text-xl font-bold text-green-600">
+                  ₦{(activeOrder.driverEarnings || activeOrder.price * 0.8 || 0).toLocaleString()}
+                </span>
+              </div>
+
+              {/* Action Button */}
+              {getNextAction() && (
+                <button
+                  onClick={() => updateOrderStatus(getNextAction().next)}
+                  className={`w-full py-4 rounded-xl font-semibold text-white transition flex items-center justify-center gap-2 ${
+                    getNextAction().next === 'delivered'
+                      ? 'bg-green-500 hover:bg-green-600'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                >
+                  {getNextAction().next === 'delivered' && <Check className="w-5 h-5" />}
+                  {getNextAction().label}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

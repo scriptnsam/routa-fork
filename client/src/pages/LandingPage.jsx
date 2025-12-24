@@ -15,7 +15,10 @@ import {
   Zap,
   Users,
   Globe,
-  Wallet
+  Wallet,
+  Phone,
+  Mail,
+  MessageCircle
 } from 'lucide-react';
 
 const LandingPage = () => {
@@ -29,20 +32,6 @@ const LandingPage = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  const fadeInUp = {
-    initial: { opacity: 0, y: 20 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.5 }
-  };
-
-  const staggerContainer = {
-    animate: {
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -117,9 +106,15 @@ const LandingPage = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
+              {/* Location Badge */}
+              <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-medium mb-4">
+                <MapPin className="w-4 h-4" />
+                Now available in Ekiti State
+              </div>
+              
+              <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-medium mb-6 ml-2">
                 <Zap className="w-4 h-4" />
-                Now with crypto payments on Base
+                Fast & Reliable Delivery
               </div>
               
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6">
@@ -131,8 +126,8 @@ const LandingPage = () => {
               </h1>
               
               <p className="text-lg md:text-xl text-gray-600 mb-8 leading-relaxed">
-                The fastest way to send packages across the city. Real-time tracking, 
-                instant settlements, and blockchain-verified deliveries.
+                The fastest way to send packages across Ekiti State. Real-time tracking, 
+                instant notifications, and reliable deliveries every time.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
@@ -148,7 +143,7 @@ const LandingPage = () => {
                   className="inline-flex items-center justify-center gap-2 border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-full hover:border-blue-600 hover:text-blue-600 transition font-semibold text-lg"
                 >
                   <Truck className="w-5 h-5" />
-                  Become a Driver
+                  Become a Rider
                 </Link>
               </div>
 
@@ -258,11 +253,11 @@ const LandingPage = () => {
                 >
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <Wallet className="w-4 h-4 text-blue-600" />
+                      <MapPin className="w-4 h-4 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Payment</p>
-                      <p className="text-sm font-bold">$12.50 USDC</p>
+                      <p className="text-xs text-gray-500">Live in</p>
+                      <p className="text-sm font-bold">Ekiti State 📍</p>
                     </div>
                   </div>
                 </motion.div>
@@ -272,12 +267,24 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* Coverage Area Banner */}
+      <section className="py-8 bg-blue-600">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-4 text-white text-center">
+            <MapPin className="w-6 h-6" />
+            <p className="text-lg">
+              <span className="font-bold">Currently serving Ekiti State</span> — Ado-Ekiti, Ikere, Ijero, Ikole, Oye & more areas coming soon!
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Trusted By Section */}
       <section className="py-12 bg-gray-50 border-y">
         <div className="max-w-7xl mx-auto px-4">
-          <p className="text-center text-gray-500 mb-8">Trusted by businesses across Africa</p>
+          <p className="text-center text-gray-500 mb-8">Trusted by businesses across Ekiti State</p>
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-50">
-            {['🏪 Shoprite', '🏦 GTBank', '📱 MTN', '🛒 Jumia', '🍔 Chicken Republic'].map((brand, i) => (
+            {['🏪 Local Stores', '🍔 Restaurants', '🏥 Pharmacies', '🛒 Supermarkets', '📱 Phone Shops'].map((brand, i) => (
               <span key={i} className="text-xl md:text-2xl font-bold text-gray-400">{brand}</span>
             ))}
           </div>
@@ -298,7 +305,7 @@ const LandingPage = () => {
               <span className="text-blue-600"> seamless delivery</span>
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              From real-time tracking to blockchain payments, we've built the complete logistics solution.
+              From real-time tracking to instant notifications, we've built the complete logistics solution for Ekiti.
             </p>
           </motion.div>
 
@@ -313,31 +320,31 @@ const LandingPage = () => {
               {
                 icon: <Zap className="w-6 h-6" />,
                 title: 'Instant Matching',
-                description: 'Our AI matches you with the nearest available driver within seconds.',
+                description: 'Our system matches you with the nearest available rider within seconds.',
                 color: 'bg-yellow-500'
               },
               {
                 icon: <Shield className="w-6 h-6" />,
                 title: 'Secure & Insured',
-                description: 'All deliveries are insured up to ₦500,000. Your packages are protected.',
+                description: 'All deliveries are handled with care. Your packages are protected.',
                 color: 'bg-green-500'
               },
               {
                 icon: <Wallet className="w-6 h-6" />,
-                title: 'Crypto Payments',
-                description: 'Pay with USDC on Base. Instant settlements with blockchain transparency.',
+                title: 'Easy Payments',
+                description: 'Pay with cash or transfer. Simple and transparent pricing.',
                 color: 'bg-purple-500'
               },
               {
                 icon: <Users className="w-6 h-6" />,
-                title: 'Verified Drivers',
-                description: 'All drivers are background-checked with on-chain reputation scores.',
+                title: 'Verified Riders',
+                description: 'All riders are verified and trained for professional service.',
                 color: 'bg-pink-500'
               },
               {
                 icon: <Globe className="w-6 h-6" />,
-                title: 'City-Wide Coverage',
-                description: 'Available across Lagos, Abuja, Port Harcourt, and expanding fast.',
+                title: 'Ekiti-Wide Coverage',
+                description: 'Available across Ado-Ekiti, Ikere, Ijero, Ikole, and expanding fast.',
                 color: 'bg-cyan-500'
               },
             ].map((feature, index) => (
@@ -388,7 +395,7 @@ const LandingPage = () => {
               {
                 step: '02',
                 title: 'Get Matched',
-                description: 'A verified driver accepts your order within minutes.',
+                description: 'A verified rider accepts your order within minutes.',
                 icon: '🤝'
               },
               {
@@ -456,7 +463,7 @@ const LandingPage = () => {
                 base: '₦1,000',
                 perKm: '₦150',
                 description: 'Medium packages',
-                features: ['Up to 20kg', 'Air conditioned', 'Fragile items welcome'],
+                features: ['Up to 20kg', 'Comfortable ride', 'Fragile items welcome'],
                 popular: true
               },
               {
@@ -532,16 +539,16 @@ const LandingPage = () => {
                 Earn Money on Your Schedule
               </h2>
               <p className="text-green-100 text-lg mb-8">
-                Join thousands of drivers earning with Routa. Flexible hours, instant USDC payouts, 
-                and build your on-chain reputation.
+                Join our growing team of riders in Ekiti State. Flexible hours, weekly payouts, 
+                and great earning potential.
               </p>
 
               <div className="grid grid-cols-2 gap-4 mb-8">
                 {[
-                  { value: '₦150K+', label: 'Avg Monthly Earnings' },
-                  { value: '5,000+', label: 'Active Drivers' },
+                  { value: '₦100K+', label: 'Avg Monthly Earnings' },
+                  { value: '50+', label: 'Active Riders' },
                   { value: '24/7', label: 'Support Available' },
-                  { value: 'Instant', label: 'Crypto Payouts' },
+                  { value: 'Weekly', label: 'Payouts' },
                 ].map((stat, i) => (
                   <div key={i} className="bg-white/10 rounded-xl p-4">
                     <p className="text-2xl font-bold text-white">{stat.value}</p>
@@ -554,7 +561,7 @@ const LandingPage = () => {
                 to="/register?role=driver"
                 className="inline-flex items-center gap-2 bg-white text-green-600 px-8 py-4 rounded-full hover:bg-green-50 transition font-semibold text-lg"
               >
-                Start Driving Today
+                Start Riding Today
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </motion.div>
@@ -571,24 +578,24 @@ const LandingPage = () => {
                     🧑
                   </div>
                   <div>
-                    <p className="font-bold text-lg">David Okonkwo</p>
+                    <p className="font-bold text-lg">Tunde Adeyemi</p>
                     <div className="flex items-center gap-1">
                       <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                      <span className="text-sm text-gray-600">4.9 • 1,234 deliveries</span>
+                      <span className="text-sm text-gray-600">4.9 • 234 deliveries</span>
                     </div>
                   </div>
                   <span className="ml-auto px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                    Gold Driver
+                    Top Rider
                   </span>
                 </div>
                 
                 <div className="grid grid-cols-3 gap-4 mb-6">
                   <div className="text-center p-3 bg-gray-50 rounded-xl">
-                    <p className="text-2xl font-bold text-gray-900">₦45K</p>
+                    <p className="text-2xl font-bold text-gray-900">₦35K</p>
                     <p className="text-xs text-gray-500">This Week</p>
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded-xl">
-                    <p className="text-2xl font-bold text-gray-900">32</p>
+                    <p className="text-2xl font-bold text-gray-900">28</p>
                     <p className="text-xs text-gray-500">Deliveries</p>
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded-xl">
@@ -597,11 +604,11 @@ const LandingPage = () => {
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4 text-white">
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-4 text-white">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-blue-100">Courier NFT</p>
-                      <p className="font-bold">Reputation Score: 92/100</p>
+                      <p className="text-sm text-blue-100">Rider Level</p>
+                      <p className="font-bold">Gold Partner 🏆</p>
                     </div>
                     <div className="text-3xl">🎖️</div>
                   </div>
@@ -622,7 +629,7 @@ const LandingPage = () => {
             className="text-center mb-16"
           >
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Loved by Thousands
+              Loved by Ekiti Businesses
             </h2>
             <p className="text-lg text-gray-600">
               See what our customers are saying
@@ -632,24 +639,24 @@ const LandingPage = () => {
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
-                name: 'Chioma Nwosu',
-                role: 'E-commerce Owner',
+                name: 'Mrs. Adebayo',
+                role: 'Restaurant Owner, Ado-Ekiti',
                 image: '👩🏾',
-                text: 'Routa has transformed how I deliver to customers. Same-day delivery has increased my sales by 40%!',
+                text: 'Routa has transformed how I deliver food to customers. Same-hour delivery has increased my orders by 40%!',
                 rating: 5
               },
               {
-                name: 'Ahmed Ibrahim',
-                role: 'Restaurant Owner',
+                name: 'Segun Olatunji',
+                role: 'Phone Shop Owner, Ikere',
                 image: '👨🏽',
-                text: 'The real-time tracking gives my customers peace of mind. Best delivery service in Lagos!',
+                text: 'Fast and reliable! My customers love the real-time tracking. Best delivery service in Ekiti!',
                 rating: 5
               },
               {
-                name: 'Blessing Okafor',
-                role: 'Routa Driver',
+                name: 'Funmi Ajayi',
+                role: 'Routa Rider',
                 image: '👩🏾',
-                text: 'I earn more than my previous job with flexible hours. The instant USDC payouts are amazing!',
+                text: 'I earn good money with flexible hours. The app is easy to use and support is always helpful!',
                 rating: 5
               },
             ].map((testimonial, index) => (
@@ -692,7 +699,7 @@ const LandingPage = () => {
               Ready to Transform Your Deliveries?
             </h2>
             <p className="text-lg text-gray-600 mb-8">
-              Join thousands of customers and drivers already using Routa.
+              Join businesses and riders already using Routa in Ekiti State.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link 
@@ -703,10 +710,13 @@ const LandingPage = () => {
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <a 
-                href="mailto:hello@routahq.com" 
-                className="inline-flex items-center justify-center gap-2 border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-full hover:border-blue-600 hover:text-blue-600 transition font-semibold text-lg"
+                href="https://wa.me/2349033518016"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-full hover:border-green-500 hover:text-green-600 transition font-semibold text-lg"
               >
-                Contact Sales
+                <MessageCircle className="w-5 h-5" />
+                Chat on WhatsApp
               </a>
             </div>
           </motion.div>
@@ -728,12 +738,20 @@ const LandingPage = () => {
                 <span className="text-2xl font-bold text-white">Routa</span>
               </Link>
               <p className="mb-4 max-w-sm">
-                The fastest way to deliver anything, anywhere. Powered by blockchain technology.
+                The fastest way to deliver anything, anywhere in Ekiti State. Fast, reliable, and affordable.
               </p>
+              
+              {/* Social Links */}
               <div className="flex gap-4">
-                <a href="#" className="hover:text-white transition">Twitter</a>
-                <a href="#" className="hover:text-white transition">Instagram</a>
-                <a href="#" className="hover:text-white transition">LinkedIn</a>
+                <a 
+                  href="https://x.com/routaHQ" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition flex items-center gap-1"
+                >
+                  <X className="w-4 h-4" />
+                  @routaHQ
+                </a>
               </div>
             </div>
 
@@ -743,8 +761,8 @@ const LandingPage = () => {
               <ul className="space-y-2">
                 <li><a href="#features" className="hover:text-white transition">Features</a></li>
                 <li><a href="#pricing" className="hover:text-white transition">Pricing</a></li>
-                <li><a href="#" className="hover:text-white transition">API</a></li>
-                <li><a href="#" className="hover:text-white transition">Integrations</a></li>
+                <li><a href="#how-it-works" className="hover:text-white transition">How it Works</a></li>
+                <li><a href="#drivers" className="hover:text-white transition">Become a Rider</a></li>
               </ul>
             </div>
 
@@ -759,25 +777,83 @@ const LandingPage = () => {
             </div>
 
             <div>
-              <h4 className="text-white font-semibold mb-4">Support</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="hover:text-white transition">Help Center</a></li>
-                <li><a href="#" className="hover:text-white transition">Contact</a></li>
-                <li><a href="#" className="hover:text-white transition">Privacy</a></li>
-                <li><a href="#" className="hover:text-white transition">Terms</a></li>
+              <h4 className="text-white font-semibold mb-4">Contact</h4>
+              <ul className="space-y-3">
+                <li>
+                  <a 
+                    href="https://wa.me/2349033518016" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition flex items-center gap-2"
+                  >
+                    <MessageCircle className="w-4 h-4 text-green-500" />
+                    WhatsApp Support
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="tel:+2349033518016" 
+                    className="hover:text-white transition flex items-center gap-2"
+                  >
+                    <Phone className="w-4 h-4 text-blue-500" />
+                    +234 903 351 8016
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="mailto:routahq@gmail.com" 
+                    className="hover:text-white transition flex items-center gap-2"
+                  >
+                    <Mail className="w-4 h-4 text-red-500" />
+                    routahq@gmail.com
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="https://x.com/routaHQ" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                    </svg>
+                    @routaHQ
+                  </a>
+                </li>
               </ul>
+            </div>
+          </div>
+
+          {/* Coverage Area */}
+          <div className="border-t border-gray-800 pt-8 mb-8">
+            <div className="flex items-center justify-center gap-2 text-center">
+              <MapPin className="w-5 h-5 text-blue-500" />
+              <p>
+                <span className="text-white font-medium">Service Area:</span> Ekiti State — Ado-Ekiti, Ikere, Ijero, Ikole, Oye, and more areas coming soon
+              </p>
             </div>
           </div>
 
           <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center">
             <p>&copy; {new Date().getFullYear()} Routa. All rights reserved.</p>
-            <div className="flex items-center gap-2 mt-4 md:mt-0">
-              <span>Built on</span>
-              <span className="text-blue-400 font-medium">Base</span>
+            <div className="flex items-center gap-4 mt-4 md:mt-0">
+              <a href="#" className="hover:text-white transition text-sm">Privacy Policy</a>
+              <a href="#" className="hover:text-white transition text-sm">Terms of Service</a>
             </div>
           </div>
         </div>
       </footer>
+
+      {/* Floating WhatsApp Button */}
+      <a
+        href="https://wa.me/2349033518016"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-green-500 rounded-full flex items-center justify-center shadow-lg hover:bg-green-600 transition hover:scale-110"
+      >
+        <MessageCircle className="w-7 h-7 text-white" />
+      </a>
     </div>
   );
 };
