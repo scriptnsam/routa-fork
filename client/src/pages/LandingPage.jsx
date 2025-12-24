@@ -18,7 +18,9 @@ import {
   Wallet,
   Phone,
   Mail,
-  MessageCircle
+  MessageCircle,
+  Coins,
+  Link as LinkIcon
 } from 'lucide-react';
 
 const LandingPage = () => {
@@ -32,6 +34,21 @@ const LandingPage = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Base Logo SVG Component
+  const BaseLogo = ({ className = "w-5 h-5" }) => (
+    <svg className={className} viewBox="0 0 111 111" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M54.921 110.034C85.359 110.034 110.034 85.402 110.034 55.017C110.034 24.6319 85.359 0 54.921 0C26.0432 0 2.35281 22.1714 0 50.3923H72.8467V59.6416H0C2.35281 87.8625 26.0432 110.034 54.921 110.034Z" fill="#0052FF"/>
+    </svg>
+  );
+
+  // USDC Logo SVG Component
+  const USDCLogo = ({ className = "w-5 h-5" }) => (
+    <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="16" cy="16" r="16" fill="#2775CA"/>
+      <path d="M20.5 18.5C20.5 16.5 19 15.5 16 15C13.75 14.5 13.25 14 13.25 13C13.25 12 14 11.25 15.75 11.25C17.25 11.25 18 11.75 18.25 12.75C18.25 12.75 18.25 13 18.5 13H19.75C20 13 20 12.75 20 12.75C19.75 11.25 18.5 10 16.5 9.75V8.5C16.5 8.25 16.25 8 16 8H15C14.75 8 14.5 8.25 14.5 8.5V9.75C12.5 10 11 11.25 11 13.25C11 15.25 12.5 16.25 15.5 16.75C17.5 17.25 18.25 17.75 18.25 18.75C18.25 19.75 17.25 20.5 15.75 20.5C13.75 20.5 13 19.75 12.75 18.75C12.75 18.5 12.5 18.25 12.25 18.25H11C10.75 18.25 10.5 18.5 10.5 18.75C10.75 20.5 12 21.75 14.5 22.25V23.5C14.5 23.75 14.75 24 15 24H16C16.25 24 16.5 23.75 16.5 23.5V22.25C18.75 21.75 20.5 20.5 20.5 18.5Z" fill="white"/>
+    </svg>
+  );
 
   return (
     <div className="min-h-screen bg-white">
@@ -107,14 +124,23 @@ const LandingPage = () => {
               transition={{ duration: 0.6 }}
             >
               {/* Location Badge */}
-              <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-medium mb-4">
-                <MapPin className="w-4 h-4" />
-                Now available in Ekiti State
-              </div>
-              
-              <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-medium mb-6 ml-2">
-                <Zap className="w-4 h-4" />
-                Fast & Reliable Delivery
+              <div className="flex flex-wrap gap-2 mb-6">
+                <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-medium">
+                  <MapPin className="w-4 h-4" />
+                  Now in Ekiti State
+                </div>
+                
+                {/* Base Badge */}
+                <div className="inline-flex items-center gap-2 bg-[#0052FF]/10 text-[#0052FF] px-4 py-2 rounded-full text-sm font-medium">
+                  <BaseLogo className="w-4 h-4" />
+                  Built on Base
+                </div>
+
+                {/* USDC Badge */}
+                <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-medium">
+                  <USDCLogo className="w-4 h-4" />
+                  Pay with USDC
+                </div>
               </div>
               
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6">
@@ -127,7 +153,7 @@ const LandingPage = () => {
               
               <p className="text-lg md:text-xl text-gray-600 mb-8 leading-relaxed">
                 The fastest way to send packages across Ekiti State. Real-time tracking, 
-                instant notifications, and reliable deliveries every time.
+                instant crypto settlements on <span className="font-semibold text-[#0052FF]">Base</span>, and reliable deliveries every time.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
@@ -148,7 +174,7 @@ const LandingPage = () => {
               </div>
 
               {/* Trust Badges */}
-              <div className="flex items-center gap-6 text-sm text-gray-500">
+              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
                 <div className="flex items-center gap-2">
                   <Shield className="w-5 h-5 text-green-500" />
                   <span>Insured Deliveries</span>
@@ -158,8 +184,8 @@ const LandingPage = () => {
                   <span>30 Min Average</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Star className="w-5 h-5 text-yellow-500" />
-                  <span>4.9 Rating</span>
+                  <BaseLogo className="w-5 h-5" />
+                  <span>Onchain Verified</span>
                 </div>
               </div>
             </motion.div>
@@ -246,18 +272,34 @@ const LandingPage = () => {
                   </div>
                 </motion.div>
 
+                {/* USDC Payment Card */}
                 <motion.div 
                   animate={{ y: [0, 10, 0] }}
                   transition={{ duration: 2.5, repeat: Infinity }}
-                  className="absolute -right-12 bottom-32 bg-white rounded-xl shadow-lg p-3 hidden md:block"
+                  className="absolute -right-16 top-32 bg-white rounded-xl shadow-lg p-3 hidden md:block border border-blue-100"
                 >
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <MapPin className="w-4 h-4 text-blue-600" />
+                      <USDCLogo className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Live in</p>
-                      <p className="text-sm font-bold">Ekiti State 📍</p>
+                      <p className="text-xs text-gray-500">Payment Received</p>
+                      <p className="text-sm font-bold text-green-600">+5.00 USDC</p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Base Network Card */}
+                <motion.div 
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                  className="absolute -right-12 bottom-32 bg-gradient-to-r from-[#0052FF] to-blue-600 rounded-xl shadow-lg p-3 hidden md:block text-white"
+                >
+                  <div className="flex items-center gap-2">
+                    <BaseLogo className="w-6 h-6 bg-white rounded-full p-0.5" />
+                    <div>
+                      <p className="text-xs text-blue-100">Powered by</p>
+                      <p className="text-sm font-bold">Base Network</p>
                     </div>
                   </div>
                 </motion.div>
@@ -267,8 +309,35 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* Base Network Banner */}
+      <section className="py-6 bg-gradient-to-r from-[#0052FF] to-blue-600">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-4 text-white text-center">
+            <div className="flex items-center gap-3">
+              <BaseLogo className="w-8 h-8 bg-white rounded-full p-1" />
+              <span className="text-lg font-semibold">Built on Base</span>
+            </div>
+            <span className="hidden md:block">•</span>
+            <div className="flex items-center gap-2">
+              <USDCLogo className="w-6 h-6" />
+              <span>Pay with USDC</span>
+            </div>
+            <span className="hidden md:block">•</span>
+            <div className="flex items-center gap-2">
+              <Zap className="w-5 h-5" />
+              <span>Instant Settlements</span>
+            </div>
+            <span className="hidden md:block">•</span>
+            <div className="flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              <span>Onchain Verified</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Coverage Area Banner */}
-      <section className="py-8 bg-blue-600">
+      <section className="py-6 bg-green-600">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-center gap-4 text-white text-center">
             <MapPin className="w-6 h-6" />
@@ -305,7 +374,7 @@ const LandingPage = () => {
               <span className="text-blue-600"> seamless delivery</span>
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              From real-time tracking to instant notifications, we've built the complete logistics solution for Ekiti.
+              From real-time tracking to blockchain payments on Base, we've built the complete logistics solution.
             </p>
           </motion.div>
 
@@ -330,22 +399,22 @@ const LandingPage = () => {
                 color: 'bg-green-500'
               },
               {
-                icon: <Wallet className="w-6 h-6" />,
-                title: 'Easy Payments',
-                description: 'Pay with cash or transfer. Simple and transparent pricing.',
+                icon: <BaseLogo className="w-6 h-6" />,
+                title: 'Built on Base',
+                description: 'Leveraging Base network for fast, low-cost, and secure transactions.',
+                color: 'bg-[#0052FF]'
+              },
+              {
+                icon: <Coins className="w-6 h-6" />,
+                title: 'USDC Payments',
+                description: 'Pay with USDC stablecoin. Instant settlements with no volatility.',
+                color: 'bg-blue-600'
+              },
+              {
+                icon: <LinkIcon className="w-6 h-6" />,
+                title: 'Onchain Verification',
+                description: 'Every delivery is recorded onchain for transparency and trust.',
                 color: 'bg-purple-500'
-              },
-              {
-                icon: <Users className="w-6 h-6" />,
-                title: 'Verified Riders',
-                description: 'All riders are verified and trained for professional service.',
-                color: 'bg-pink-500'
-              },
-              {
-                icon: <Globe className="w-6 h-6" />,
-                title: 'Ekiti-Wide Coverage',
-                description: 'Available across Ado-Ekiti, Ikere, Ijero, Ikole, and expanding fast.',
-                color: 'bg-cyan-500'
               },
             ].map((feature, index) => (
               <motion.div
@@ -400,8 +469,8 @@ const LandingPage = () => {
               },
               {
                 step: '03',
-                title: 'Track & Receive',
-                description: 'Watch your delivery in real-time until it arrives.',
+                title: 'Pay & Track',
+                description: 'Pay with USDC or cash, then track your delivery in real-time.',
                 icon: '📦'
               },
             ].map((item, index) => (
@@ -443,8 +512,16 @@ const LandingPage = () => {
               Simple, Transparent Pricing
             </h2>
             <p className="text-lg text-gray-600">
-              Pay only for what you use. No hidden fees.
+              Pay with Naira or USDC. No hidden fees.
             </p>
+            <div className="flex items-center justify-center gap-4 mt-4">
+              <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-medium">
+                <span>💵</span> Cash / Transfer
+              </div>
+              <div className="flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-medium">
+                <USDCLogo className="w-4 h-4" /> USDC on Base
+              </div>
+            </div>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
@@ -453,6 +530,7 @@ const LandingPage = () => {
                 name: 'Bike',
                 icon: '🏍️',
                 base: '₦500',
+                baseUSDC: '~0.30 USDC',
                 perKm: '₦100',
                 description: 'Small packages, documents',
                 features: ['Up to 5kg', 'Fastest option', 'Perfect for documents']
@@ -461,6 +539,7 @@ const LandingPage = () => {
                 name: 'Car',
                 icon: '🚗',
                 base: '₦1,000',
+                baseUSDC: '~0.60 USDC',
                 perKm: '₦150',
                 description: 'Medium packages',
                 features: ['Up to 20kg', 'Comfortable ride', 'Fragile items welcome'],
@@ -470,6 +549,7 @@ const LandingPage = () => {
                 name: 'Van',
                 icon: '🚐',
                 base: '₦2,500',
+                baseUSDC: '~1.50 USDC',
                 perKm: '₦250',
                 description: 'Large items, bulk orders',
                 features: ['Up to 100kg', 'Furniture friendly', 'Business deliveries']
@@ -500,6 +580,7 @@ const LandingPage = () => {
                 <div className="text-center mb-6">
                   <span className="text-4xl font-bold text-gray-900">{plan.base}</span>
                   <span className="text-gray-500"> base</span>
+                  <p className="text-blue-600 text-sm font-medium">{plan.baseUSDC}</p>
                   <p className="text-gray-500">+ {plan.perKm}/km</p>
                 </div>
                 <ul className="space-y-3 mb-8">
@@ -539,7 +620,7 @@ const LandingPage = () => {
                 Earn Money on Your Schedule
               </h2>
               <p className="text-green-100 text-lg mb-8">
-                Join our growing team of riders in Ekiti State. Flexible hours, weekly payouts, 
+                Join our growing team of riders in Ekiti State. Flexible hours, instant USDC payouts on Base, 
                 and great earning potential.
               </p>
 
@@ -547,8 +628,8 @@ const LandingPage = () => {
                 {[
                   { value: '₦100K+', label: 'Avg Monthly Earnings' },
                   { value: '50+', label: 'Active Riders' },
-                  { value: '24/7', label: 'Support Available' },
-                  { value: 'Weekly', label: 'Payouts' },
+                  { value: 'Instant', label: 'USDC Payouts' },
+                  { value: 'Onchain', label: 'Reputation' },
                 ].map((stat, i) => (
                   <div key={i} className="bg-white/10 rounded-xl p-4">
                     <p className="text-2xl font-bold text-white">{stat.value}</p>
@@ -604,13 +685,27 @@ const LandingPage = () => {
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-4 text-white">
+                {/* Base/USDC Earnings Card */}
+                <div className="bg-gradient-to-r from-[#0052FF] to-blue-600 rounded-xl p-4 text-white mb-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-blue-100">Rider Level</p>
-                      <p className="font-bold">Gold Partner 🏆</p>
+                      <p className="text-sm text-blue-100">USDC Balance</p>
+                      <p className="text-2xl font-bold">$42.50</p>
                     </div>
-                    <div className="text-3xl">🎖️</div>
+                    <div className="flex items-center gap-2">
+                      <USDCLogo className="w-8 h-8" />
+                      <BaseLogo className="w-8 h-8 bg-white rounded-full p-1" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-purple-100 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-purple-600">Onchain Reputation</p>
+                      <p className="font-bold text-purple-700">Score: 92/100 🎖️</p>
+                    </div>
+                    <LinkIcon className="w-6 h-6 text-purple-600" />
                   </div>
                 </div>
               </div>
@@ -649,14 +744,14 @@ const LandingPage = () => {
                 name: 'Segun Olatunji',
                 role: 'Phone Shop Owner, Ikere',
                 image: '👨🏽',
-                text: 'Fast and reliable! My customers love the real-time tracking. Best delivery service in Ekiti!',
+                text: 'Fast and reliable! I love paying riders instantly with USDC. Best delivery service in Ekiti!',
                 rating: 5
               },
               {
                 name: 'Funmi Ajayi',
                 role: 'Routa Rider',
                 image: '👩🏾',
-                text: 'I earn good money with flexible hours. The app is easy to use and support is always helpful!',
+                text: 'I earn good money with flexible hours. Getting paid in USDC on Base is instant and amazing!',
                 rating: 5
               },
             ].map((testimonial, index) => (
@@ -695,11 +790,15 @@ const LandingPage = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <BaseLogo className="w-10 h-10" />
+              <span className="text-2xl font-bold text-[#0052FF]">Built on Base</span>
+            </div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
               Ready to Transform Your Deliveries?
             </h2>
             <p className="text-lg text-gray-600 mb-8">
-              Join businesses and riders already using Routa in Ekiti State.
+              Join businesses and riders already using Routa in Ekiti State. Pay with Naira or USDC.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link 
@@ -738,8 +837,20 @@ const LandingPage = () => {
                 <span className="text-2xl font-bold text-white">Routa</span>
               </Link>
               <p className="mb-4 max-w-sm">
-                The fastest way to deliver anything, anywhere in Ekiti State. Fast, reliable, and affordable.
+                The fastest way to deliver anything, anywhere in Ekiti State. Powered by Base blockchain.
               </p>
+              
+              {/* Base Badge */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex items-center gap-2 bg-[#0052FF]/20 text-[#0052FF] px-3 py-1.5 rounded-full text-sm font-medium">
+                  <BaseLogo className="w-4 h-4" />
+                  Built on Base
+                </div>
+                <div className="flex items-center gap-2 bg-blue-900 text-blue-300 px-3 py-1.5 rounded-full text-sm font-medium">
+                  <USDCLogo className="w-4 h-4" />
+                  USDC Payments
+                </div>
+              </div>
               
               {/* Social Links */}
               <div className="flex gap-4">
@@ -749,7 +860,9 @@ const LandingPage = () => {
                   rel="noopener noreferrer"
                   className="hover:text-white transition flex items-center gap-1"
                 >
-                  <X className="w-4 h-4" />
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
                   @routaHQ
                 </a>
               </div>
@@ -838,8 +951,14 @@ const LandingPage = () => {
           <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center">
             <p>&copy; {new Date().getFullYear()} Routa. All rights reserved.</p>
             <div className="flex items-center gap-4 mt-4 md:mt-0">
-              <a href="#" className="hover:text-white transition text-sm">Privacy Policy</a>
-              <a href="#" className="hover:text-white transition text-sm">Terms of Service</a>
+              <div className="flex items-center gap-2">
+                <span>Built on</span>
+                <BaseLogo className="w-5 h-5" />
+                <span className="text-[#0052FF] font-medium">Base</span>
+              </div>
+              <span className="text-gray-600">|</span>
+              <a href="#" className="hover:text-white transition text-sm">Privacy</a>
+              <a href="#" className="hover:text-white transition text-sm">Terms</a>
             </div>
           </div>
         </div>
