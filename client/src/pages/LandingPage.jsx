@@ -809,7 +809,7 @@ const LandingPage = () => {
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <a 
-                href="https://wa.me/2349033518016"
+                href="https://wa.me/2349130764653"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-full hover:border-green-500 hover:text-green-600 transition font-semibold text-lg"
@@ -894,7 +894,7 @@ const LandingPage = () => {
               <ul className="space-y-3">
                 <li>
                   <a 
-                    href="https://wa.me/2349033518016" 
+                    href="https://wa.me/2349130764653" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="hover:text-white transition flex items-center gap-2"
@@ -905,11 +905,11 @@ const LandingPage = () => {
                 </li>
                 <li>
                   <a 
-                    href="tel:+2349033518016" 
+                    href="tel:+2349130764653" 
                     className="hover:text-white transition flex items-center gap-2"
                   >
                     <Phone className="w-4 h-4 text-blue-500" />
-                    +234 903 351 8016
+                    +234 913 076 4653
                   </a>
                 </li>
                 <li>
