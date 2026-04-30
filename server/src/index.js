@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const authRoutes = require('./routes/authRoutes.js');
 require('dotenv').config();
 
 const app = express();
@@ -203,6 +204,8 @@ app.get('/api/orders', (req, res) => {
   });
   res.json(orders);
 });
+
+app.use('/api/auth', authRoutes);
 
 // Start Server
 const PORT = process.env.PORT || 3001;
